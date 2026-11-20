@@ -1,13 +1,7 @@
 import 'dot-stash/dist/css/default.css';
 import 'pixclean/style.css';
-import {
-  createPixelCleanEditor,
-  definePixelCleanElements,
-  type PixelCleanApplyPayload,
-} from 'pixclean';
+import { createPixelCleanEditor, type PixelCleanApplyPayload } from 'pixclean';
 import type { OpenedFilePayload } from '../electron/ipc-types';
-
-definePixelCleanElements(window);
 
 const desktop = window.pixCleanDesktop;
 const container = document.querySelector<HTMLElement>('#app');
