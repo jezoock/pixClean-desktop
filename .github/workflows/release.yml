@@ -1,0 +1,47 @@
+name: Desktop Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build & package desktop binaries
+        run: npm run dist
+
+      - name: Upload artifacts to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if ! gh release view "$TAG" > /dev/null 2>&1; then
+            gh release create "$TAG" --verify-tag --title "PixelClean Desktop ${TAG#v}" --generate-notes || true
+          fi
+          shopt -s nullglob
+          FILES=(release/*.AppImage release/*.deb release/*.exe release/*.dmg release/*.zip)
+          if [ ${#FILES[@]} -gt 0 ]; then
+            gh release upload "$TAG" "${FILES[@]}" --clobber
+          fi

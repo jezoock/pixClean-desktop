@@ -1,0 +1,23 @@
+appId: com.jezoock.pixclean.desktop
+productName: PixelClean Studio
+directories:
+  output: release
+files:
+  - dist/**
+  - dist-electron/**
+  - package.json
+asar: true
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Graphics
+win:
+  target:
+    - nsis
+    - portable
+mac:
+  target:
+    - dmg
+    - zip
+  category: public.app-category.graphics-design
