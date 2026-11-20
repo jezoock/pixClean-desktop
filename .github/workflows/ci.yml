@@ -26,3 +26,9 @@ jobs:
 
       - name: Build renderer & Electron bundles
         run: npm run build
+
+      - name: Verify dot-stash browser bundle in dist/
+        run: |
+          test -f dist/dot-stash/dot-stash.esm.js
+          ls dist/dot-stash/*.entry.js | head -n 5
+          grep -q 'dot-stash/dot-stash.esm.js' dist/index.html

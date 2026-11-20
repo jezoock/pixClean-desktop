@@ -1,9 +1,33 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, type MenuItemConstructorOptions } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  Menu,
+  net,
+  protocol,
+  type MenuItemConstructorOptions,
+} from 'electron';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import type { MenuCommand, OpenedFilePayload, SavePngRequest, SavePngResult } from './ipc-types';
 
+const APP_SCHEME = 'app';
+const APP_HOST = 'pixclean';
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp']);
+
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: APP_SCHEME,
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+    },
+  },
+]);
 
 let mainWindow: BrowserWindow | null = null;
 let pendingFilePath: string | null = null;
@@ -134,6 +158,23 @@ function buildAppMenu(): void {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
+function registerAppProtocol(): void {
+  const distDir = path.resolve(__dirname, '..', 'dist');
+
+  protocol.handle(APP_SCHEME, (request) => {
+    const url = new URL(request.url);
+    let reqPath = decodeURIComponent(url.pathname);
+    if (reqPath === '/' || reqPath === '') {
+      reqPath = '/index.html';
+    }
+    const resolvedPath = path.resolve(distDir, '.' + reqPath);
+    if (!resolvedPath.startsWith(distDir + path.sep) && resolvedPath !== distDir) {
+      return new Response('Forbidden', { status: 403 });
+    }
+    return net.fetch(pathToFileURL(resolvedPath).href);
+  });
+}
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1320,
@@ -155,8 +196,7 @@ function createWindow(): void {
   if (devUrl) {
     void mainWindow.loadURL(devUrl);
   } else {
-    const indexPath = path.join(__dirname, '..', 'dist', 'index.html');
-    void mainWindow.loadFile(indexPath);
+    void mainWindow.loadURL(`${APP_SCHEME}://${APP_HOST}/index.html`);
   }
 
   mainWindow.on('closed', () => {
@@ -238,6 +278,7 @@ if (!gotSingleInstanceLock) {
   });
 
   void app.whenReady().then(() => {
+    registerAppProtocol();
     buildAppMenu();
     registerIpcHandlers();
     createWindow();
